@@ -1,0 +1,49 @@
+name: Deploy to O2switch Production
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          
+      - name: Install Dependencies
+        run: npm install
+        
+      - name: Build
+        run: npm run build
+        
+      - name: Deploy to O2switch
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+        with:
+          server: trutta.o2switch.net
+          username: kuna4419
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: ./build/
+          server-dir: /public_html/wp-content/plugins/wedding-photo-selection/
+          
+      - name: Notify Deployment Status
+        if: always()
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const status = ${{ job.status }}
+            const message = status === 'success' 
+              ? '✅ Déploiement réussi sur O2switch'
+              : '❌ Échec du déploiement'
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: message
+            })
