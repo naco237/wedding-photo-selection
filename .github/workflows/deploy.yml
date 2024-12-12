@@ -4,46 +4,73 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
-  deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
+    
     steps:
-      - uses: actions/checkout@v3
-      
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '18'
-          
-      - name: Install Dependencies
-        run: npm install
-        
-      - name: Build
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build React application
         run: npm run build
-        
-      - name: Deploy to O2switch
+        env:
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}
+
+      - name: Deploy React build to O2switch
         uses: SamKirkland/FTP-Deploy-Action@v4.3.4
         with:
-          server: trutta.o2switch.net
-          username: kuna4419
+          server: ${{ secrets.FTP_HOST }}
+          username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
-          local-dir: ./build/
+          local-dir: ./dist/
+          server-dir: /public_html/wp-content/plugins/wedding-photo-selection/app/
+
+      - name: Deploy WordPress plugin to O2switch
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+        with:
+          server: ${{ secrets.FTP_HOST }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: ./wordpress-plugin/
           server-dir: /public_html/wp-content/plugins/wedding-photo-selection/
-          
-      - name: Notify Deployment Status
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/node_modules/**
+            README.md
+
+      - name: Verify deployment
+        run: |
+          echo " Deployment completed!"
+          echo "Frontend deployed to: /public_html/wp-content/plugins/wedding-photo-selection/app/"
+          echo "WordPress plugin deployed to: /public_html/wp-content/plugins/wedding-photo-selection/"
+
+      - name: Create deployment status
         if: always()
         uses: actions/github-script@v6
         with:
           script: |
-            const status = ${{ job.status }}
+            const { status, conclusion } = context.job
             const message = status === 'success' 
-              ? '✅ Déploiement réussi sur O2switch'
-              : '❌ Échec du déploiement'
+              ? ' Déploiement réussi sur O2switch'
+              : ' Échec du déploiement'
             
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
+            await github.rest.repos.createDeploymentStatus({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: message
+              deployment_id: context.payload.deployment ? context.payload.deployment.id : null,
+              state: conclusion === 'success' ? 'success' : 'failure',
+              description: message
             })
