@@ -35,7 +35,7 @@ jobs:
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           local-dir: ./dist/
-          server-dir: /public_html/wp-content/plugins/wedding-photo-selection/app/
+          server-dir: /public_html/tri-photos/wp-content/plugins/wedding-photo-selection/app/
 
       - name: Deploy WordPress plugin to O2switch
         uses: SamKirkland/FTP-Deploy-Action@v4.3.4
@@ -44,7 +44,7 @@ jobs:
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           local-dir: ./wordpress-plugin/
-          server-dir: /public_html/wp-content/plugins/wedding-photo-selection/
+          server-dir: /public_html/tri-photos/wp-content/plugins/wedding-photo-selection/
           exclude: |
             **/.git*
             **/.git*/**
@@ -54,8 +54,8 @@ jobs:
       - name: Verify deployment
         run: |
           echo " Deployment completed!"
-          echo "Frontend deployed to: /public_html/wp-content/plugins/wedding-photo-selection/app/"
-          echo "WordPress plugin deployed to: /public_html/wp-content/plugins/wedding-photo-selection/"
+          echo "Frontend deployed to: /public_html/tri-photos/wp-content/plugins/wedding-photo-selection/app/"
+          echo "WordPress plugin deployed to: /public_html/tri-photos/wp-content/plugins/wedding-photo-selection/"
 
       - name: Create deployment status
         if: always()
